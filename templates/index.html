@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CiteCheck — quote it, or don't say it</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
+h1{font-size:1.4rem}.tag{color:#16a34a;font-weight:700}
+section{border:1px solid #ddd;border-radius:8px;padding:1rem;margin:1rem 0}
+button{background:#16a34a;color:#fff;border:0;border-radius:6px;padding:.5rem 1rem;cursor:pointer}
+input[type=text]{width:70%;padding:.5rem}
+cite{color:#555;font-size:.85rem}.refused{color:#b91c1c;font-weight:700}
+pre{white-space:pre-wrap;background:#f7f7f2;padding:.75rem;border-radius:6px}
+</style>
+</head>
+<body>
+<h1>CiteCheck <span class="tag">· FORTEC</span></h1>
+<p>Quote it, or don't say it. Answers come only from your uploaded notes.</p>
+
+<section>
+<h2>1. Your notes</h2>
+<form id="up" enctype="multipart/form-data">
+<input type="file" name="file" accept=".txt,.md,.pdf">
+<button>Upload</button>
+<button type="button" id="sample">Load sample notes (synthetic)</button>
+</form>
+<p id="loaded">{{ loaded }} chunks loaded.</p>
+</section>
+
+<section>
+<h2>2. Ask</h2>
+<input type="text" id="q" placeholder="e.g. Where does photosynthesis take place?">
+<button id="ask">Ask</button>
+<pre id="a">—</pre>
+</section>
+
+<section>
+<h2>3. Quiz + stale check</h2>
+<button id="quiz">Make 5-question quiz</button>
+<button id="stale">Check stale notes</button>
+<pre id="qz">—</pre>
+</section>
+
+<script>
+async function post(url, body, isForm){
+  const opts = {method:'POST', body};
+  if(!isForm) opts.headers = {'Content-Type':'application/json'};
+  const r = await fetch(url, opts);
+  return r.json();
+}
+document.getElementById('up').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const d = await post('/upload', new FormData(e.target), true);
+  document.getElementById('loaded').textContent = d.ok ? d.chunks+' chunks loaded.' : ('Error: '+d.error);
+});
+document.getElementById('sample').addEventListener('click', async ()=>{
+  const fd = new FormData(); fd.append('sample','1');
+  const d = await post('/upload', fd, true);
+  document.getElementById('loaded').textContent = d.ok ? d.chunks+' chunks loaded (sample notes).' : ('Error: '+d.error);
+});
+document.getElementById('ask').addEventListener('click', async ()=>{
+  const q = document.getElementById('q').value;
+  const d = await post('/ask', JSON.stringify({question:q}), false);
+  const el = document.getElementById('a');
+  if(!d.ok){ el.textContent = 'Error: '+d.error; return; }
+  el.innerHTML = (d.answered ? '' : '<span class="refused">REFUSED — </span>') + d.answer +
+    (d.citations.length ? '\n\n' + d.citations.map(c=>'['+c.source+' · chunk '+c.chunk+']').join(' ') : '');
+});
+document.getElementById('quiz').addEventListener('click', async ()=>{
+  const d = await post('/quiz', '{}', false);
+  const el = document.getElementById('qz');
+  if(!d.ok){ el.textContent = 'Error: '+d.error; return; }
+  el.textContent = d.questions.map((x,i)=> (i+1)+'. '+x.question+'\n   Options: '+x.options.join(', ')+'\n   Answer: '+x.answer+' ['+x.citation.source+' · chunk '+x.citation.chunk+']').join('\n\n');
+});
+document.getElementById('stale').addEventListener('click', async ()=>{
+  const r = await fetch('/stale'); const d = await r.json();
+  const el = document.getElementById('qz');
+  if(!d.ok){ el.textContent = 'Error: '+d.error; return; }
+  el.textContent = d.flags.length ? d.flags.map(f=>'⚠ '+f.note+' ['+f.source+' · chunk '+f.chunk+']\n  "'+f.text+'…"').join('\n\n') : 'No stale notes found.';
+});
+</script>
+</body>
+</html>
