@@ -1,7 +1,9 @@
 # CiteCheck — PRASUNEX Innovathon 2026, Round 3 submission notes
 
 Team Fortec (solo) — Ronit Shrimankar. Theme: AI/ML.
-Demo video: _link added after recording_ (under 3 minutes, live app).
+Demo video: 40-second screen recording of the live app
+(`demo-video/citecheck-demo.mp4` in this repo; a YouTube link will be
+added if the submission form asks for one).
 Repository: https://github.com/eres0045/citecheck
 
 ## What it is
